@@ -1,12 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Embedding Vega-Lite</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Syrian Refugees in Canada - IAT 355 Final Project">
+    <meta name="author" content="Garry Grewal, Zohaib Jafri">
+    <title>Syrian Refugees in Canada</title>
+
+    <!--import vega, d3 libraries-->
+    <script src="https://cdn.jsdelivr.net/npm/d3@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega@5.7.3"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-lite@4.0.0-beta.11"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.0.0"></script>
+
   </head>
   <body>
+    <header>
+      <h1>Syrian Refugees in Canada Data Analysis</h1>
+      <h2>IAT 355 Final Project</h2>
+      <h2>Garry Grewal & Zohaib Jafri</h2>
+    </header>
+
+    <p>I'm hosted with GitHub Pages.</p>
+    <!--DOM element that visualizations will be attatched to if using VegaEmbed-->
     <div id="vis"></div>
 
     <script type="text/javascript">
@@ -34,5 +51,8 @@
       };
       vegaEmbed('#vis', yourVlSpec);
     </script>
+
+    <!-- embed spec files for Vega visualizations -->
+    <script src="./js/refugees-linked-vegalite-spec.js"></script>
   </body>
 </html>

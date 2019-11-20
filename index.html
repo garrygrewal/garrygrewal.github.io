@@ -7,12 +7,17 @@
     <meta name="author" content="Garry Grewal, Zohaib Jafri">
     <title>Syrian Refugees in Canada</title>
 
-    <!--import vega, d3 libraries-->
+    <link rel="stylesheet" href="css/main.css">
+    <script type="text/javascript" src="data/canada_provinces.js"></script>
+
+    <!--import vega, d3, leaflet libraries-->
     <script src="https://cdn.jsdelivr.net/npm/d3@5"></script>
     <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega@5.7.3"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-lite@4.0.0-beta.11"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.0.0"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
 
   </head>
   <body>
@@ -22,37 +27,155 @@
       <h2>Garry Grewal & Zohaib Jafri</h2>
     </header>
 
-    <p>I'm hosted with GitHub Pages.</p>
+    <!--DOM element that visualizations will be attatched to if using leaflet-->
+    <div id="mapid"></div>
     <!--DOM element that visualizations will be attatched to if using VegaEmbed-->
     <div id="vis"></div>
 
-    <script type="text/javascript">
-      var yourVlSpec = {
-        $schema: 'https://vega.github.io/schema/vega-lite/v2.0.json',
-        description: 'A simple bar chart with embedded data.',
-        data: {
-          values: [
-            {a: 'A', b: 28},
-            {a: 'B', b: 55},
-            {a: 'C', b: 43},
-            {a: 'D', b: 91},
-            {a: 'E', b: 81},
-            {a: 'F', b: 53},
-            {a: 'G', b: 19},
-            {a: 'H', b: 87},
-            {a: 'I', b: 52}
-          ]
-        },
-        mark: 'bar',
-        encoding: {
-          x: {field: 'a', type: 'ordinal'},
-          y: {field: 'b', type: 'quantitative'}
-        }
+    <!--Leaflet map-->
+    <script>
+      var geojson;
+      var mymap = L.map('mapid').setView([58.7684, -94.1650], 3.5);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mymap);
+
+      function getColor(d) {
+          return d > 20000 ? '#800026' :
+                 d > 10000  ? '#BD0026' :
+                 d > 5000  ? '#E31A1C' :
+                 d > 2500  ? '#FC4E2A' :
+                 d > 1000   ? '#FD8D3C' :
+                 d > 100   ? '#FEB24C' :
+                 d > 10   ? '#FED976' :
+                            '#FFEDA0';
+      }
+
+      function style(feature) {
+          return {
+              fillColor: getColor(feature.properties.density),
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.7
+          };
+      }
+
+      var info = L.control();
+      info.onAdd = function (mymap) {
+          this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+          this.update();
+          return this._div;
       };
-      vegaEmbed('#vis', yourVlSpec);
+
+      // method that we will use to update the control based on feature properties passed
+      info.update = function (props) {
+          this._div.innerHTML = '<h4>Syrian Refugee Population (2015-2019)</h4>' +  (props ?
+              '<b>' + props.PRENAME + '</b><br />' + props.density + ' people'
+              : 'Hover over a province');
+      };
+
+      info.addTo(mymap);
+
+      var legend = L.control({position: 'bottomright'});
+
+      legend.onAdd = function (mymap) {
+          var div = L.DomUtil.create('div', 'info legend'),
+              grades = [0, 10, 100, 1000, 2500, 5000, 10000, 20000],
+              labels = [];
+
+          // loop through our density intervals and generate a label with a colored square for each interval
+          for (var i = 0; i < grades.length; i++) {
+              div.innerHTML +=
+                  '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                  grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+          }
+          return div;
+      };
+
+      legend.addTo(mymap);
+
+
+      function highlightFeature(e) {
+          var layer = e.target;
+
+          layer.setStyle({
+              weight: 5,
+              color: '#666',
+              dashArray: '',
+              fillOpacity: 0.7
+          });
+
+          if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+              layer.bringToFront();
+          }
+
+          info.update(layer.feature.properties);
+      }
+
+      function resetHighlight(e) {
+          geojson.resetStyle(e.target);
+          info.update();
+      }
+
+      function zoomToFeature(e) {
+          mymap.fitBounds(e.target.getBounds());
+          showGraphs = !showGraphs;
+      }
+
+      function onEachFeature(feature, layer) {
+          layer.on({
+              mouseover: highlightFeature,
+              mouseout: resetHighlight,
+              click: zoomToFeature
+          });
+      }
+
+      geojson = L.geoJson(canadaEdist, {
+          style: style,
+          onEachFeature: onEachFeature
+      }).addTo(mymap);
+
     </script>
 
+
+    <!-- <p>Testing: vega-lite</p> -->
+    <!--vegalite map-->
+    <!-- <script type="text/javascript">
+      var yourVlSpec = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v4.json",
+        "width": 800,
+        "height": 500,
+        "data": {
+          "url": "https://gist.githubusercontent.com/garrygrewal/aef4bd739392841523c45edbb286203d/raw/41e7d4dad9ee79d728fed2a60f60102fdc4ad715/geovis-in-vega-lite.json",
+          "format": {
+            "type": "topojson",
+            "feature": "VancouverAreaSize"
+          }
+        },
+        "projection": {
+          "type": "mercator"
+        },
+        "mark": "geoshape",
+        "encoding": {
+          "color": {
+            "field": "properties.density",
+            "type": "quantitative",
+            "scale": {"scheme": "greys"}
+          },
+          "stroke": {
+            "value": "black"
+          }
+        }
+      };
+      vegaEmbed('#vis', yourVlSpec, {
+        "actions": false //hide floating button
+      });
+    </script> -->
+
     <!-- embed spec files for Vega visualizations -->
-    <script src="./js/refugees-linked-vegalite-spec.js"></script>
+    <!-- <script src="./js/refugees-linked-vegalite-spec.js"></script> -->
   </body>
 </html>
